@@ -1,6 +1,11 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+from database import create_document
+from schemas import Waitlist
 
 app = FastAPI()
 
@@ -63,6 +68,19 @@ def test_database():
     response["database_name"] = "✅ Set" if os.getenv("DATABASE_NAME") else "❌ Not Set"
     
     return response
+
+# -------- Waitlist API --------
+class WaitlistIn(BaseModel):
+    email: EmailStr
+    source: Optional[str] = None
+
+@app.post("/api/waitlist")
+def add_waitlist(entry: WaitlistIn):
+    try:
+        doc_id = create_document("waitlist", entry.dict())
+        return {"ok": True, "id": doc_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
